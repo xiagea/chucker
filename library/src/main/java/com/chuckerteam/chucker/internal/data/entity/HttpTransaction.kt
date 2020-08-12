@@ -73,7 +73,7 @@ internal class HttpTransaction(
         responseMessage = null,
         error = null,
         responsePayloadSize = null,
-        responseContentType = "application/json",
+        responseContentType = null,
         responseHeaders = null,
         responseBody = null,
         responseImageData = null
@@ -210,7 +210,7 @@ internal class HttpTransaction(
     }
 
     fun getFormattedResponseBody(): String {
-        return responseBody?.let { formatBody(it, responseContentType) } ?: ""
+        return responseBody?.let { formatBody(it, "application/json") } ?: ""
     }
 
     fun populateUrl(httpUrl: HttpUrl): HttpTransaction {
