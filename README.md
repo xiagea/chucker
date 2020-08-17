@@ -145,7 +145,7 @@ repositories {
     maven { url "https://oss.sonatype.org/content/repositories/snapshots/" }
 }
 dependencies {
-  debugImplementation "com.github.xiagea:chucker:0.0.1"
+  debugImplementation "com.github.xiagea:chucker:0.0.4"
   releaseImplementation "com.github.chuckerteam.chucker:library-no-op:3.3.0-SNAPSHOT"
 }
 ```
