@@ -1,12 +1,11 @@
 package com.chuckerteam.chucker.internal.support
 
+import java.io.File
+import java.io.IOException
 import okio.Buffer
 import okio.Okio
 import okio.Source
 import okio.Timeout
-import java.io.File
-import java.io.FileNotFoundException
-import java.io.IOException
 
 /**
  * A source that acts as a tee operator - https://en.wikipedia.org/wiki/Tee_(command).
@@ -15,6 +14,9 @@ import java.io.IOException
  * like a regular [Source]. While bytes are read from the [upstream] the are also copied
  * to a [sideChannel] file. After the [upstream] is depleted or when a failure occurs
  * an appropriate [callback] method is called.
+ *
+ * Failure is considered any [IOException] during reading the bytes,
+ * exceeding [readBytesLimit] length or not reading the whole upstream.
  */
 internal class TeeSource(
     private val upstream: Source,
@@ -22,15 +24,11 @@ internal class TeeSource(
     private val callback: Callback,
     private val readBytesLimit: Long = Long.MAX_VALUE
 ) : Source {
-    private val sideStream = try {
-        Okio.buffer(Okio.sink(sideChannel))
-    } catch (e: FileNotFoundException) {
-        callSideChannelFailure(IOException("Failed to use file $sideChannel by Chucker", e))
-        null
-    }
+    private val sideStream = Okio.buffer(Okio.sink(sideChannel))
     private var totalBytesRead = 0L
+    private var isReadLimitExceeded = false
+    private var isUpstreamExhausted = false
     private var isFailure = false
-    private var isClosed = false
 
     override fun read(sink: Buffer, byteCount: Long): Long {
         val bytesRead = try {
@@ -41,49 +39,37 @@ internal class TeeSource(
         }
 
         if (bytesRead == -1L) {
-            sideStream?.close()
+            isUpstreamExhausted = true
+            sideStream.close()
             return -1L
         }
 
-        val previousTotalByteRead = totalBytesRead
         totalBytesRead += bytesRead
-        if (sideStream == null) return bytesRead
-
-        if (previousTotalByteRead >= readBytesLimit) {
-            sideStream.close()
+        if (!isReadLimitExceeded && (totalBytesRead <= readBytesLimit)) {
+            val offset = sink.size() - bytesRead
+            sink.copyTo(sideStream.buffer(), offset, bytesRead)
+            sideStream.emitCompleteSegments()
             return bytesRead
         }
-
-        if (!isFailure) {
-            copyBytesToFile(sink, bytesRead)
+        if (!isReadLimitExceeded) {
+            isReadLimitExceeded = true
+            sideStream.close()
+            callSideChannelFailure(IOException("Capacity of $readBytesLimit bytes exceeded"))
         }
 
         return bytesRead
     }
 
-    private fun copyBytesToFile(sink: Buffer, bytesRead: Long) {
-        if (sideStream == null) return
-
-        val byteCountToCopy = if (totalBytesRead <= readBytesLimit) {
-            bytesRead
-        } else {
-            bytesRead - (totalBytesRead - readBytesLimit)
-        }
-        val offset = sink.size() - bytesRead
-        sink.copyTo(sideStream.buffer(), offset, byteCountToCopy)
-        try {
-            sideStream.emitCompleteSegments()
-        } catch (e: IOException) {
-            callSideChannelFailure(e)
-        }
-    }
-
     override fun close() {
-        sideStream?.close()
+        sideStream.close()
         upstream.close()
-        if (!isClosed) {
-            isClosed = true
-            callback.onClosed(sideChannel, totalBytesRead)
+        if (isUpstreamExhausted) {
+            // Failure might have occurred due to exceeding limit.
+            if (!isFailure) {
+                callback.onSuccess(sideChannel)
+            }
+        } else {
+            callSideChannelFailure(IOException("Upstream was not fully consumed"))
         }
     }
 
@@ -92,24 +78,24 @@ internal class TeeSource(
     private fun callSideChannelFailure(exception: IOException) {
         if (!isFailure) {
             isFailure = true
-            sideStream?.close()
-            callback.onFailure(sideChannel, exception)
+            callback.onFailure(exception, sideChannel)
         }
     }
 
     interface Callback {
         /**
-         * Called when the upstream was closed. All read bytes are copied to the [file].
-         * This does not mean that the content of the [file] is valid. Only that the client
-         * is done with the reading process. [totalBytesRead] is the exact amount of data
-         * that the client downloaded even if the [file] is corrupted.
+         * Called when the upstream was successfully copied to the [file].
          */
-        fun onClosed(file: File, totalBytesRead: Long)
+        fun onSuccess(file: File)
 
         /**
-         * Called when an exception was thrown while reading bytes from the upstream
-         * or when writing to a side channel file fails. Any read bytes are available in a [file].
+         * Called when there was an issue while copying bytes to the [file].
+         *
+         * It might occur due to one of the following reasons:
+         * - an exception was thrown while reading bytes
+         * - capacity limit was exceeded
+         * - upstream was not fully consumed
          */
-        fun onFailure(file: File, exception: IOException)
+        fun onFailure(exception: IOException, file: File)
     }
 }

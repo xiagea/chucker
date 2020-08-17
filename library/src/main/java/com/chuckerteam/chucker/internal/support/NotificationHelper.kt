@@ -20,8 +20,6 @@ internal class NotificationHelper(val context: Context) {
 
     companion object {
         private const val TRANSACTIONS_CHANNEL_ID = "chucker_transactions"
-
-        @Deprecated("This variable will be removed in 4.x release")
         private const val ERRORS_CHANNEL_ID = "chucker_errors"
 
         private const val TRANSACTION_NOTIFICATION_ID = 1138
@@ -47,7 +45,7 @@ internal class NotificationHelper(val context: Context) {
         PendingIntent.getActivity(
             context,
             TRANSACTION_NOTIFICATION_ID,
-            Chucker.getLaunchIntent(context),
+            Chucker.getLaunchIntent(context, Chucker.SCREEN_HTTP),
             PendingIntent.FLAG_UPDATE_CURRENT
         )
     }
@@ -163,11 +161,6 @@ internal class NotificationHelper(val context: Context) {
     }
 
     fun dismissErrorsNotification() {
-        notificationManager.cancel(ERROR_NOTIFICATION_ID)
-    }
-
-    fun dismissNotifications() {
-        notificationManager.cancel(TRANSACTION_NOTIFICATION_ID)
         notificationManager.cancel(ERROR_NOTIFICATION_ID)
     }
 }

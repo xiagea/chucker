@@ -9,7 +9,9 @@ import com.chuckerteam.chucker.internal.data.entity.HttpTransaction
 import com.chuckerteam.chucker.internal.data.repository.RepositoryProvider
 import com.chuckerteam.chucker.internal.support.combineLatest
 
-internal class TransactionViewModel(transactionId: Long) : ViewModel() {
+internal class TransactionViewModel(
+    transactionId: Long
+) : ViewModel() {
 
     private val mutableEncodeUrl = MutableLiveData<Boolean>(false)
 
@@ -31,18 +33,7 @@ internal class TransactionViewModel(transactionId: Long) : ViewModel() {
             }
         }
 
-    val doesRequestBodyRequireEncoding: LiveData<Boolean> = RepositoryProvider.transaction()
-        .getTransaction(transactionId)
-        .map { transaction ->
-            transaction?.requestContentType?.contains("x-www-form-urlencoded", ignoreCase = true) ?: false
-        }
-
     val transaction: LiveData<HttpTransaction?> = RepositoryProvider.transaction().getTransaction(transactionId)
-
-    val formatRequestBody: LiveData<Boolean> = doesRequestBodyRequireEncoding
-        .combineLatest(encodeUrl) { requiresEncoding, encodeUrl ->
-            !(requiresEncoding && encodeUrl)
-        }
 
     fun switchUrlEncoding() = encodeUrl(!encodeUrl.value!!)
 
@@ -53,7 +44,8 @@ internal class TransactionViewModel(transactionId: Long) : ViewModel() {
 
 internal class TransactionViewModelFactory(
     private val transactionId: Long = 0L
-) : ViewModelProvider.NewInstanceFactory() {
+) :
+    ViewModelProvider.Factory {
     override fun <T : ViewModel?> create(modelClass: Class<T>): T {
         require(modelClass == TransactionViewModel::class.java) { "Cannot create $modelClass" }
         @Suppress("UNCHECKED_CAST")

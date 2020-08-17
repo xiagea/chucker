@@ -5,26 +5,31 @@ import android.content.Intent
 import android.os.Bundle
 import android.view.Menu
 import android.view.MenuItem
-import androidx.activity.viewModels
 import androidx.core.app.ShareCompat
 import androidx.lifecycle.Observer
+import androidx.lifecycle.ViewModelProvider
 import androidx.viewpager.widget.ViewPager
 import com.chuckerteam.chucker.R
 import com.chuckerteam.chucker.databinding.ChuckerActivityTransactionBinding
-import com.chuckerteam.chucker.internal.support.ShareUtils
+import com.chuckerteam.chucker.internal.support.FormatUtils.getShareCurlCommand
+import com.chuckerteam.chucker.internal.support.FormatUtils.getShareText
 import com.chuckerteam.chucker.internal.ui.BaseChuckerActivity
 
 internal class TransactionActivity : BaseChuckerActivity() {
 
-    private val viewModel: TransactionViewModel by viewModels {
-        TransactionViewModelFactory(intent.getLongExtra(EXTRA_TRANSACTION_ID, 0))
-    }
-
+    private lateinit var viewModel: TransactionViewModel
     private lateinit var transactionBinding: ChuckerActivityTransactionBinding
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         transactionBinding = ChuckerActivityTransactionBinding.inflate(layoutInflater)
+
+        val transactionId = intent.getLongExtra(EXTRA_TRANSACTION_ID, 0)
+
+        // Create the instance now, so it can be shared by the
+        // various fragments in the view pager later.
+        viewModel = ViewModelProvider(this, TransactionViewModelFactory(transactionId))
+            .get(TransactionViewModel::class.java)
 
         with(transactionBinding) {
             setContentView(root)
@@ -70,13 +75,13 @@ internal class TransactionActivity : BaseChuckerActivity() {
         when (item.itemId) {
             R.id.share_text -> {
                 viewModel.transaction.value?.let {
-                    share(ShareUtils.getShareText(this, it, viewModel.encodeUrl.value!!))
+                    share(getShareText(this, it, viewModel.encodeUrl.value!!))
                 } ?: showToast(getString(R.string.chucker_request_not_ready))
                 true
             }
             R.id.share_curl -> {
                 viewModel.transaction.value?.let {
-                    share(ShareUtils.getShareCurlCommand(it))
+                    share(getShareCurlCommand(it))
                 } ?: showToast(getString(R.string.chucker_request_not_ready))
                 true
             }

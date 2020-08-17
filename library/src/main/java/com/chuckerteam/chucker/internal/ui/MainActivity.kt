@@ -2,6 +2,7 @@ package com.chuckerteam.chucker.internal.ui
 
 import android.content.Intent
 import android.os.Bundle
+import androidx.lifecycle.ViewModelProvider
 import com.chuckerteam.chucker.api.Chucker
 import com.chuckerteam.chucker.databinding.ChuckerActivityMainBinding
 import com.chuckerteam.chucker.internal.ui.throwable.ThrowableActivity
@@ -15,6 +16,7 @@ internal class MainActivity :
     TransactionAdapter.TransactionClickListListener,
     ThrowableAdapter.ThrowableClickListListener {
 
+    private lateinit var viewModel: MainViewModel
     private lateinit var mainBinding: ChuckerActivityMainBinding
 
     private val applicationName: CharSequence
@@ -22,6 +24,7 @@ internal class MainActivity :
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        viewModel = ViewModelProvider(this).get(MainViewModel::class.java)
         mainBinding = ChuckerActivityMainBinding.inflate(layoutInflater)
 
         with(mainBinding) {

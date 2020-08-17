@@ -14,14 +14,14 @@ internal interface HttpTransactionDao {
 
     @Query(
         "SELECT id, requestDate, tookMs, protocol, method, host, " +
-            "path, scheme, responseCode, requestPayloadSize, responsePayloadSize, error FROM " +
+            "path, scheme, responseCode, requestContentLength, responseContentLength, error FROM " +
             "transactions ORDER BY requestDate DESC"
     )
     fun getSortedTuples(): LiveData<List<HttpTransactionTuple>>
 
     @Query(
         "SELECT id, requestDate, tookMs, protocol, method, host, " +
-            "path, scheme, responseCode, requestPayloadSize, responsePayloadSize, error FROM " +
+            "path, scheme, responseCode, requestContentLength, responseContentLength, error FROM " +
             "transactions WHERE responseCode LIKE :codeQuery AND path LIKE :pathQuery " +
             "ORDER BY requestDate DESC"
     )
@@ -41,7 +41,4 @@ internal interface HttpTransactionDao {
 
     @Query("DELETE FROM transactions WHERE requestDate <= :threshold")
     suspend fun deleteBefore(threshold: Long)
-
-    @Query("SELECT * FROM transactions")
-    suspend fun getAll(): List<HttpTransaction>
 }
