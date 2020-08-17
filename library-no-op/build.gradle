@@ -11,11 +11,15 @@ android {
     defaultConfig {
         minSdkVersion rootProject.minSdkVersion
     }
+}
 
-    lintOptions {
-        warningsAsErrors true
-        abortOnError true
-    }
+task sourcesJar(type: Jar) {
+    from android.sourceSets.main.java.srcDirs
+    archiveClassifier.set('sources')
+}
+
+artifacts {
+    archives sourcesJar
 }
 
 dependencies {

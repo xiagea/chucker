@@ -13,13 +13,13 @@ object TestTransactionFactory {
             tookMs = 1000L,
             protocol = "HTTP",
             method = method,
-            url = "http://localhost:80/getUsers",
+            url = "http://localhost/getUsers",
             host = "localhost",
             path = "/getUsers",
             scheme = "",
             responseTlsVersion = "",
             responseCipherSuite = "",
-            requestPayloadSize = 1000L,
+            requestContentLength = 1000L,
             requestContentType = "application/json",
             requestHeaders = null,
             requestBody = null,
@@ -27,7 +27,7 @@ object TestTransactionFactory {
             responseCode = 200,
             responseMessage = "OK",
             error = null,
-            responsePayloadSize = 1000L,
+            responseContentLength = 1000L,
             responseContentType = "application/json",
             responseHeaders = null,
             responseBody =
@@ -56,7 +56,7 @@ object TestTransactionFactory {
         
         ---------- Request ----------
         
-        (body is empty)
+        
         
         ---------- Response ----------
         
@@ -84,7 +84,7 @@ object TestTransactionFactory {
         
         ---------- Request ----------
         
-        (body is empty)
+        
         
         ---------- Response ----------
         

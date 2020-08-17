@@ -1,5 +1,6 @@
 package com.chuckerteam.chucker.internal.support
 
+import com.chuckerteam.chucker.TestTransactionFactory
 import com.chuckerteam.chucker.internal.data.entity.HttpHeader
 import com.google.common.truth.Truth.assertThat
 import org.junit.jupiter.api.Test
@@ -167,57 +168,49 @@ class FormatUtilsTest {
     }
 
     @Test
-    fun testFormatUrlEncodedForm_blankString() {
-        assertThat(FormatUtils.formatUrlEncodedForm("    ")).isEqualTo("    ")
+    fun testCurlCommandWithoutHeaders() {
+        getRequestMethods().forEach { method ->
+            val transaction = TestTransactionFactory.createTransaction(method)
+            val curlСommand = FormatUtils.getShareCurlCommand(transaction)
+            val expectedCurlCommand = "curl -X $method http://localhost/getUsers"
+            assertThat(curlСommand).isEqualTo(expectedCurlCommand)
+        }
     }
 
     @Test
-    fun testFormatUrlEncodedForm_properRequest() {
-        val request =
-            """
-            sampleKey=Some%20value&someOtherKey=With%20symbols%20%25!%40%25
-            """.trimIndent()
-        val expected =
-            """
-            sampleKey: Some value
-            someOtherKey: With symbols %!@%
-            """.trimIndent()
-        assertThat(FormatUtils.formatUrlEncodedForm(request)).isEqualTo(expected)
+    fun testCurlCommandWithHeaders() {
+        val httpHeaders = ArrayList<HttpHeader>()
+        for (i in 0 until 5) {
+            httpHeaders.add(HttpHeader("name$i", "value$i"))
+        }
+        val dummyHeaders = JsonConverter.instance.toJson(httpHeaders)
+
+        getRequestMethods().forEach { method ->
+            val transaction = TestTransactionFactory.createTransaction(method)
+            transaction.requestHeaders = dummyHeaders
+            val curlСommand = FormatUtils.getShareCurlCommand(transaction)
+            var expectedCurlCommand = "curl -X $method"
+            httpHeaders.forEach { header ->
+                expectedCurlCommand += " -H \"${header.name}: ${header.value}\""
+            }
+            expectedCurlCommand += " http://localhost/getUsers"
+            assertThat(curlСommand).isEqualTo(expectedCurlCommand)
+        }
     }
 
     @Test
-    fun testFormatUrlEncodedForm_singleParam() {
-        val request =
-            """
-            sampleKey=Some%20value
-            """.trimIndent()
-        val expected =
-            """
-            sampleKey: Some value
-            """.trimIndent()
-        assertThat(FormatUtils.formatUrlEncodedForm(request)).isEqualTo(expected)
+    fun testCurlPostAndPutCommandWithRequestBody() {
+        getRequestMethods().filter { method ->
+            method == "POST" || method == "PUT"
+        }.forEach { method ->
+            val dummyRequestBody = "{thing:put}"
+            val transaction = TestTransactionFactory.createTransaction(method)
+            transaction.requestBody = dummyRequestBody
+            val curlСommand = FormatUtils.getShareCurlCommand(transaction)
+            val expectedCurlCommand = "curl -X $method --data $'$dummyRequestBody' http://localhost/getUsers"
+            assertThat(curlСommand).isEqualTo(expectedCurlCommand)
+        }
     }
 
-    @Test
-    fun testFormatUrlEncodedForm_noValues() {
-        val request =
-            """
-            sampleKey=&someOtherKey=
-            """.trimIndent()
-        val expected =
-            """
-            sampleKey: 
-            someOtherKey: 
-            """.trimIndent()
-        assertThat(FormatUtils.formatUrlEncodedForm(request)).isEqualTo(expected)
-    }
-
-    @Test
-    fun testFormatUrlEncodedForm_invalidRequest() {
-        val request =
-            """
-            sampleKey=Some%20value%someOtherKey=With%20symbols%20%25!%40%25
-            """.trimIndent()
-        assertThat(FormatUtils.formatUrlEncodedForm(request)).isEqualTo(request)
-    }
+    private fun getRequestMethods() = arrayOf("GET", "POST", "PUT", "DELETE")
 }

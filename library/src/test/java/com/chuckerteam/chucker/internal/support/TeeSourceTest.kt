@@ -1,6 +1,9 @@
 package com.chuckerteam.chucker.internal.support
 
 import com.google.common.truth.Truth.assertThat
+import java.io.File
+import java.io.IOException
+import kotlin.random.Random
 import okio.Buffer
 import okio.ByteString
 import okio.Okio
@@ -9,10 +12,6 @@ import okio.Timeout
 import org.junit.jupiter.api.Test
 import org.junit.jupiter.api.assertThrows
 import org.junit.jupiter.api.io.TempDir
-import java.io.File
-import java.io.FileNotFoundException
-import java.io.IOException
-import kotlin.random.Random
 
 class TeeSourceTest {
     private val teeCallback = TestTeeCallback()
@@ -62,7 +61,7 @@ class TeeSourceTest {
     }
 
     @Test
-    fun tooBigSources_haveReadBytesAvailable_inSideChannel(@TempDir tempDir: File) {
+    fun tooBigSources_informOfFailures_inSideChannel(@TempDir tempDir: File) {
         val testFile = File(tempDir, "testFile")
         val testSource = TestSource(10_000)
         val downstream = Buffer()
@@ -70,8 +69,21 @@ class TeeSourceTest {
         val teeSource = TeeSource(testSource, testFile, teeCallback, readBytesLimit = 9_999)
         Okio.buffer(teeSource).use { it.readAll(downstream) }
 
-        val expectedContent = testSource.content.substring(0, 9_999)
-        assertThat(teeCallback.fileContent).isEqualTo(expectedContent)
+        assertThat(teeCallback.exception)
+            .hasMessageThat()
+            .isEqualTo("Capacity of 9999 bytes exceeded")
+    }
+
+    @Test
+    fun tooBigSources_doNotResultInSuccess_ifTheUpstreamIsExhausted(@TempDir tempDir: File) {
+        val testFile = File(tempDir, "testFile")
+        val testSource = TestSource(10_000)
+        val downstream = Buffer()
+
+        val teeSource = TeeSource(testSource, testFile, teeCallback, readBytesLimit = 9_999)
+        Okio.buffer(teeSource).use { it.readAll(downstream) }
+
+        assertThat(teeCallback.isSuccess).isFalse()
     }
 
     @Test
@@ -87,7 +99,7 @@ class TeeSourceTest {
     }
 
     @Test
-    fun readException_informsOfFailures_inSideChannel(@TempDir tempDir: File) {
+    fun readException_informOfFailures_inSideChannel(@TempDir tempDir: File) {
         val testFile = File(tempDir, "testFile")
         val testSource = ThrowingSource
 
@@ -103,7 +115,7 @@ class TeeSourceTest {
     }
 
     @Test
-    fun notConsumedUpstream_hasReadBytesAvailable_inSideChannel(@TempDir tempDir: File) {
+    fun notConsumedUpstream_isNotConsideredSuccess(@TempDir tempDir: File) {
         val testFile = File(tempDir, "testFile")
         // Okio uses 8KiB as a single size read.
         val testSource = TestSource(8_192 * 2)
@@ -113,8 +125,9 @@ class TeeSourceTest {
             source.readByteString(8_192)
         }
 
-        val expectedContent = testSource.content.substring(0, 8_192)
-        assertThat(teeCallback.fileContent).isEqualTo(expectedContent)
+        assertThat(teeCallback.exception)
+            .hasMessageThat()
+            .isEqualTo("Upstream was not fully consumed")
     }
 
     @Test
@@ -128,38 +141,7 @@ class TeeSourceTest {
             source.readByteString(8_192)
         }
 
-        val expectedContent = testSource.content.substring(0, 8_192)
-        assertThat(teeCallback.fileContent).isEqualTo(expectedContent)
-    }
-
-    @Test
-    fun exactlyReadBytesFromUpstream_areAvailableToSideChannel(@TempDir tempDir: File) {
-        val testFile = File(tempDir, "testFile")
-        val repetitions = Random.nextInt(1, 100)
-        // Okio uses 8KiB as a single size read.
-        val testSource = TestSource(8_192 * repetitions)
-
-        val teeSource = TeeSource(testSource, testFile, teeCallback)
-        Okio.buffer(teeSource).use { source ->
-            repeat(repetitions) { source.readByteString(8_192) }
-        }
-
-        assertThat(teeCallback.fileContent).isEqualTo(testSource.content)
-    }
-
-    @Test
-    fun exceptionWhileCreatingSideChannel_informsOfFailures_inSideChannel(@TempDir tempDir: File) {
-        assertThat(tempDir.deleteRecursively()).isTrue()
-
-        val testFile = File(tempDir, "testFile")
-
-        TeeSource(TestSource(), testFile, teeCallback)
-
-        assertThat(teeCallback.exception).apply {
-            isInstanceOf(IOException::class.java)
-            hasMessageThat().isEqualTo("Failed to use file $testFile by Chucker")
-            hasCauseThat().isInstanceOf(FileNotFoundException::class.java)
-        }
+        assertThat(teeCallback.fileContent).isEqualTo(testSource.content.substring(0, 8_192))
     }
 
     private class TestSource(contentLength: Int = 1_000) : Source {
@@ -190,12 +172,12 @@ class TeeSourceTest {
         var isSuccess = false
             private set
 
-        override fun onClosed(file: File, totalBytesRead: Long) {
+        override fun onSuccess(file: File) {
             isSuccess = true
             this.file = file
         }
 
-        override fun onFailure(file: File, exception: IOException) {
+        override fun onFailure(exception: IOException, file: File) {
             this.exception = exception
             this.file = file
         }

@@ -8,13 +8,12 @@ import kotlinx.android.synthetic.main.activity_main_sample.*
 
 class MainActivity : AppCompatActivity() {
 
-    private val client: HttpBinClient by lazy {
-        HttpBinClient(applicationContext)
-    }
+    private lateinit var client: HttpBinClient
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_main_sample)
+        client = HttpBinClient(applicationContext)
 
         do_http.setOnClickListener { client.doHttpActivity() }
         trigger_exception.setOnClickListener { client.recordException() }

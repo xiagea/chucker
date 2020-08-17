@@ -2,6 +2,7 @@ apply plugin: 'com.android.library'
 apply plugin: 'kotlin-android'
 apply plugin: 'kotlin-android-extensions'
 apply plugin: 'kotlin-kapt'
+apply plugin: 'org.jetbrains.dokka'
 
 android {
     compileSdkVersion rootProject.compileSdkVersion
@@ -21,22 +22,42 @@ android {
         jvmTarget = "1.8"
     }
 
-    buildFeatures {
-        viewBinding = true
+    viewBinding {
+        enabled = true
     }
+}
 
-    lintOptions {
-        warningsAsErrors true
-        abortOnError true
-    }
+dokka {
+    outputFormat = 'html'
+    outputDirectory = "$buildDir/javadoc"
 
-    testOptions {
-        unitTests {
-            includeAndroidResources = true
+    configuration {
+        includeNonPublic = false
+        reportUndocumented = true
+        skipEmptyPackages = true
+
+        perPackageOption {
+            prefix = "com.chuckerteam.chucker.internal"
+            suppress = true
         }
     }
+}
 
-    resourcePrefix 'chucker_'
+task sourcesJar(type: Jar) {
+    from android.sourceSets.main.java.srcDirs
+    archiveClassifier.set('sources')
+}
+
+def dokka = tasks['dokka']
+
+task javadocJar(type: Jar, dependsOn: dokka) {
+    archiveClassifier.set('javadoc')
+    from dokka.outputDirectory
+}
+
+artifacts {
+    archives javadocJar
+    archives sourcesJar
 }
 
 dependencies {
@@ -44,9 +65,7 @@ dependencies {
 
     implementation "com.google.android.material:material:$materialComponentsVersion"
     implementation "androidx.constraintlayout:constraintlayout:$constraintLayoutVersion"
-    implementation "androidx.palette:palette-ktx:$paletteKtxVersion"
 
-    implementation "androidx.fragment:fragment-ktx:$fragmentVersion"
     implementation "androidx.lifecycle:lifecycle-viewmodel-ktx:$lifecycleVersion"
     implementation "androidx.lifecycle:lifecycle-livedata-ktx:$lifecycleVersion"
     implementation "androidx.room:room-ktx:$roomVersion"
@@ -61,15 +80,11 @@ dependencies {
 
     testImplementation "org.junit.jupiter:junit-jupiter-api:$junitVersion"
     testRuntimeOnly "org.junit.jupiter:junit-jupiter-engine:$junitVersion"
-    testImplementation "junit:junit:$vintageJunitVersion"
-    testRuntimeOnly "org.junit.vintage:junit-vintage-engine:$vintageJunitVersion"
     testImplementation "org.junit.jupiter:junit-jupiter-params:$junitVersion"
     testImplementation "io.mockk:mockk:$mockkVersion"
     testImplementation "com.squareup.okhttp3:mockwebserver:$okhttp3Version"
-    testImplementation "androidx.test:core:$androidxTestCoreVersion"
     testImplementation "androidx.arch.core:core-testing:$androidXCoreVersion"
     testImplementation "com.google.truth:truth:$truthVersion"
-    testImplementation "org.robolectric:robolectric:$robolectricVersion"
 }
 
 apply from: rootProject.file('gradle/gradle-mvn-push.gradle')
