@@ -8,7 +8,7 @@ repositories {
 
 ```groovy
 dependencies {
-  debugImplementation "om.github.xiagea:chucker:3.2.0"
+  debugImplementation "com.github.xiagea:chucker:0.0.5"
   releaseImplementation "com.github.ChuckerTeam.Chucker:library-no-op:3.2.0"
 }
 ```
