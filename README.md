@@ -156,10 +156,6 @@ Moreover, you can still use [JitPack](https://jitpack.io/#ChuckerTeam/chucker) a
 repositories {
     maven { url "https://jitpack.io" }
 }
-dependencies {
-  debugImplementation "com.github.chuckerteam.chucker:library:develop-SNAPSHOT"
-  releaseImplementation "com.github.chuckerteam.chucker:library-no-op:develop-SNAPSHOT"
-}
 ```
 
 
