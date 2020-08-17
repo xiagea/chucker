@@ -20,15 +20,5 @@
         <service
             android:name="com.chuckerteam.chucker.internal.support.ClearDatabaseService"
             android:exported="false" />
-    
-        <provider
-            android:name="com.chuckerteam.chucker.internal.support.ChuckerFileProvider"
-            android:authorities="${applicationId}.com.chuckerteam.chucker.provider"
-            android:exported="false"
-            android:grantUriPermissions="true">
-            <meta-data
-                android:name="android.support.FILE_PROVIDER_PATHS"
-                android:resource="@xml/chucker_provider_paths" />
-        </provider>
     </application>
 </manifest>

@@ -4,5 +4,5 @@
     <item android:title="@string/chucker_clear"
         android:id="@+id/clear"
         android:icon="@drawable/chucker_ic_delete_white"
-        app:showAsAction="ifRoom" />
+        app:showAsAction="always" />
 </menu>
